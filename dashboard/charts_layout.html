@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline Visualization Dashboard</title>
+
+    <style>
+    body {
+        background-color: #0f111a; /* Matching the dark theme from your screenshot */
+        color: #ffffff;
+        font-family: sans-serif;
+        padding: 20px;
+    }
+
+    .dashboard-title {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .chart-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 25px;
+        margin-top: 20px;
+    }
+
+    .chart-card {
+        border-radius: 15px;
+        padding: 15px;
+        background: white;
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.08);
+        color: #000000;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chart-title {
+        text-align: center;
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+
+    .chart-image {
+        width: 100%;
+        height: 350px;
+        object-fit: contain;
+    }
+
+    /* Flex container to perfectly center text indicators inside a card */
+    .chart-placeholder {
+        width: 100%;
+        height: 350px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 20px;
+        color: #333333;
+        font-weight: 500;
+        text-align: center;
+        background-color: #ffffff;
+    }
+
+    /* Styles a clean fallback container if an image crashes/fails to load */
+    .image-fallback {
+        background-color: #f8f9fa;
+        border: 2px dashed #cccccc;
+        border-radius: 8px;
+        box-sizing: border-box;
+        padding: 20px;
+    }
+    </style>
+</head>
+
+<body>
+
+<div class="dashboard-title">
+    📈 Generated Visualizations
+</div>
+
+<div class="chart-container">
+
+    <!-- Data Type Distribution -->
+    <div class="chart-card">
+        <div class="chart-title">Data Type Distribution</div>
+        <img class="chart-image" src="datatype_distribution.png" alt="Data Type Distribution">
+    </div>
+
+    <!-- Missing Values (Updated: Text container instead of a blank chart image) -->
+    <div class="chart-card">
+        <div class="chart-title">Missing Values</div>
+        <div class="chart-placeholder">
+            No Missing Values
+        </div>
+    </div>
+
+    <!-- Correlation Heatmap -->
+    <div class="chart-card">
+        <div class="chart-title">Correlation Heatmap</div>
+        <img class="chart-image" src="correlation.png" alt="Correlation Heatmap">
+    </div>
+
+    <!-- Target Distribution -->
+    <div class="chart-card">
+        <div class="chart-title">Target Distribution</div>
+        <img class="chart-image" src="target_distribution.png" alt="Target Distribution">
+    </div>
+
+    <!-- Target Pie Chart -->
+    <div class="chart-card">
+        <div class="chart-title">Target Pie Chart</div>
+        <img class="chart-image" src="target_pie_chart.png" alt="Target Pie Chart">
+    </div>
+
+    <!-- Model Comparison (Updated: Added JavaScript error fallback to catch broken links) -->
+    <div class="chart-card">
+        <div class="chart-title">Model Comparison</div>
+        <img class="chart-image" 
+             src="model_comparison.png" 
+             alt="Model Comparison"
+             onerror="handleMissingImage(this)">
+    </div>
+
+</div>
+
+<script>
+// Automatically turns a broken image icon into a clean, readable text warning
+function handleMissingImage(image) {
+    const fallbackDiv = document.createElement('div');
+    fallbackDiv.className = 'chart-placeholder image-fallback';
+    fallbackDiv.innerText = 'Chart Not Available\n(Check if models have run & path is correct)';
+    image.parentNode.replaceChild(fallbackDiv, image);
+}
+</script>
+
+</body>
+</html>
