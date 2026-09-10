@@ -1,3 +1,4 @@
 chardet
 joblib
 scikit-learn
+xgboost
