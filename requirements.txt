@@ -13,3 +13,4 @@ seaborn
 reportlab
 python-dotenv
 google-generativeai
+catboost
