@@ -1,0 +1,16 @@
+streamlit
+pandas
+numpy
+chardet
+joblib
+scikit-learn
+xgboost
+lightgbm
+openpyxl
+pyarrow
+matplotlib
+seaborn
+reportlab
+python-dotenv
+google-generativeai
+catboost
