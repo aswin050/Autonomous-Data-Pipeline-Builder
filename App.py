@@ -194,13 +194,13 @@ if uploaded_file:
             # =========================================
 
 
-            for key,value in result.items():
+            for key, value in result.items():
 
                 st.session_state[key] = value
 
-
-
-            st.session_state["pipeline_completed"] = True
+            st.session_state["pipeline_completed"] = bool(
+                result.get("success", False)
+            )
 
 
 
@@ -406,6 +406,51 @@ if st.session_state.get(
 
         )
 
+    # =================================================
+    # AI QUALITY ADVISOR
+    # =================================================
+
+    if "ai_advice" in st.session_state:
+
+        st.subheader(
+            "🤖 AI Quality Advisor"
+        )
+
+        ai_advice = st.session_state[
+            "ai_advice"
+        ]
+
+        if isinstance(ai_advice, dict):
+
+            if ai_advice.get("status") == "success":
+
+                st.success(
+                    "Gemini AI analysis completed successfully ✅"
+                )
+
+                st.markdown(
+                    ai_advice.get(
+                        "advice",
+                        "No AI advice available."
+                    )
+                )
+
+            else:
+
+                st.warning(
+                    ai_advice.get(
+                        "message",
+                        "AI Quality Advisor failed."
+                    )
+                )
+
+        else:
+
+            # In case the agent returns plain text
+            st.markdown(
+                str(ai_advice)
+            )
+
 
 
 
@@ -528,8 +573,216 @@ if st.session_state.get(
 
         )
 
+# =================================================
+# 🤖 DATASET ASSISTANT
+# =================================================
+
+if st.session_state.get("pipeline_completed"):
+
+    st.divider()
+
+    st.header("🤖 Dataset Assistant")
+
+    st.write(
+        "Ask questions about your dataset using natural language."
+    )
+
+    question = st.text_input(
+        "💬 Ask a question",
+        placeholder=(
+            "Example: What is the average Fare by passenger class?"
+        ),
+        key="dataset_assistant_question"
+    )
+
+    if st.button(
+        "🚀 Ask Dataset Assistant",
+        use_container_width=True
+    ):
+
+        if not question.strip():
+
+            st.warning(
+                "Please enter a question."
+            )
+
+        else:
+
+            try:
+
+                from agents.dataset_assistant_agent import (
+                    DatasetAssistantAgent
+                )
+
+                dataset = st.session_state.get(
+                    "dataset"
+                )
+
+                analysis_report = st.session_state.get(
+                    "analysis_report",
+                    {}
+                )
+
+                quality_report = st.session_state.get(
+                    "quality_report",
+                    {}
+                )
+
+                model_report = st.session_state.get(
+                    "model_report",
+                    {}
+                )
+
+                if dataset is None:
+
+                    st.error(
+                        "Dataset is not available."
+                    )
+
+                else:
+
+                    with st.spinner(
+                        "🤖 Dataset Assistant is analyzing..."
+                    ):
+
+                        assistant = DatasetAssistantAgent()
+
+                        assistant_result = assistant.ask(
+                            question=question,
+                            df=dataset,
+                            analysis_report=analysis_report,
+                            quality_report=quality_report,
+                            model_report=model_report
+                        )
+
+                    # =========================================
+                    # CHECK FOR ERROR
+                    # =========================================
+
+                    if assistant_result.get("error"):
+
+                        st.error(
+                            f"Dataset Assistant failed: "
+                            f"{assistant_result['error']}"
+                        )
+
+                    else:
+
+                        # =====================================
+                        # SAVE RESULT
+                        # =====================================
+
+                        st.session_state[
+                            "assistant_result"
+                        ] = assistant_result
 
 
+            except Exception as e:
+
+                st.error(
+                    f"Dataset Assistant failed: {e}"
+                )
+
+
+# =================================================
+# DISPLAY DATASET ASSISTANT RESULT
+# =================================================
+
+if "assistant_result" in st.session_state:
+
+    assistant_result = st.session_state[
+        "assistant_result"
+    ]
+
+    st.divider()
+
+    st.subheader(
+        "💡 Assistant Answer"
+    )
+
+    # =============================================
+    # ANSWER
+    # =============================================
+
+    answer = assistant_result.get(
+        "answer"
+    )
+
+    if answer:
+
+        # Fix literal \n characters
+        answer = answer.replace(
+            "\\n",
+            "\n"
+        )
+
+        # Render Markdown properly
+        st.markdown(
+            answer
+        )
+
+    else:
+
+        st.warning(
+            "No answer was generated."
+        )
+
+
+    # =============================================
+    # CHART
+    # =============================================
+
+    chart_path = assistant_result.get(
+        "chart"
+    )
+
+    if chart_path:
+
+        # Normalize Windows path
+        chart_path = os.path.normpath(
+            chart_path
+        )
+
+        if os.path.exists(chart_path):
+
+            st.subheader(
+                "📊 Visualization"
+            )
+
+            st.image(
+                chart_path,
+                use_container_width=True
+            )
+
+        else:
+
+            st.warning(
+                f"Chart was generated but could not be found: "
+                f"{chart_path}"
+            )
+
+
+    # =============================================
+    # OPTIONAL: SHOW ANALYSIS DETAILS
+    # =============================================
+
+    with st.expander(
+        "🔍 Analysis Details"
+    ):
+
+        st.json(
+            assistant_result.get(
+                "plan",
+                {}
+            )
+        )
+
+        st.json(
+            assistant_result.get(
+                "result",
+                {}
+            )
+        )
 
 
     # =================================================
@@ -610,12 +863,12 @@ if st.session_state.get(
     # PDF
 
 
-    if "report" in st.session_state:
+    if "report_path" in st.session_state:
 
 
         with open(
 
-            st.session_state["report"],
+            st.session_state["report_path"],
 
             "rb"
 

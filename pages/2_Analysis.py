@@ -100,7 +100,7 @@ col3.metric(
 
 st.dataframe(
     df.head(),
-    use_container_width=True
+    width="stretch"
 )
 
 
@@ -222,7 +222,7 @@ if "analysis_report" in st.session_state:
 
     st.dataframe(
         report["data_types"],
-        use_container_width=True
+        width="stretch"
     )
 
 
@@ -243,7 +243,7 @@ if "analysis_report" in st.session_state:
 
         st.dataframe(
             report["missing_values"],
-            use_container_width=True
+            width="stretch"
         )
 
 
@@ -268,5 +268,5 @@ if "analysis_report" in st.session_state:
 
     st.dataframe(
         report["summary"],
-        use_container_width=True
+        width="stretch"
     )

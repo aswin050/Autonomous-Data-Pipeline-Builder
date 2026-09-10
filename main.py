@@ -15,34 +15,38 @@ from validators.smart_validator import SmartDatasetValidator
 
 from agents.dataset_loader_agent import DatasetLoaderAgent
 from agents.analyze_agent import DatasetAnalysisAgent
+from agents.DataQualityAgent import DataQualityAgent
+from agents.ai_quality_advisor_agent import AIQualityAdvisorAgent
 from agents.cleaning_agent import CleaningAgent
+
 from agents.feature_engineering_agent import (
     AdvancedFeatureEngineeringAgent
 )
 
 from ML_agent.training_agent import TrainingAgent
 
+from agents.dataset_assistant_agent import (
+    DatasetAssistantAgent
+)
+
 from agents.visualization_agent import VisualizationAgent
 from agents.pdf_report_agent import PDFReportAgent
 
 
 # =====================================================
-# CREATE REQUIRED DIRECTORIES
+# REQUIRED DIRECTORIES
 # =====================================================
 
 REQUIRED_FOLDERS = [
     "output",
     "output/plots",
+    "output/assistant_charts",
     "models",
     "logs"
 ]
 
 for folder in REQUIRED_FOLDERS:
-
-    os.makedirs(
-        folder,
-        exist_ok=True
-    )
+    os.makedirs(folder, exist_ok=True)
 
 
 # =====================================================
@@ -66,38 +70,68 @@ def main(dataset_path):
 
         "dataset_path": dataset_path,
 
+        # -------------------------------------------------
+        # DATASETS
+        # -------------------------------------------------
+
         "dataset": None,
-
         "cleaned_dataset": None,
-
         "feature_dataset": None,
 
-        "target": None,
+        "cleaned_dataset_path": None,
+        "feature_dataset_path": None,
 
+        # -------------------------------------------------
+        # TARGET
+        # -------------------------------------------------
+
+        "target": None,
         "target_column": None,
 
+        # -------------------------------------------------
+        # REPORTS
+        # -------------------------------------------------
+
         "validator_report": {},
-
         "loader_report": {},
-
         "analysis_report": {},
-
+        "quality_report": {},
+        "ai_advice": {},
         "cleaning_report": {},
-
         "feature_report": {},
-
         "model_report": {},
-
         "best_result": {},
+
+        # -------------------------------------------------
+        # MODEL
+        # -------------------------------------------------
 
         "best_model": None,
 
+        # -------------------------------------------------
+        # VISUALIZATION
+        # -------------------------------------------------
+
         "plots": {},
 
-        "report_path": None
+        # -------------------------------------------------
+        # DATASET ASSISTANT
+        # -------------------------------------------------
 
+        "assistant": None,
+
+        # -------------------------------------------------
+        # PDF
+        # -------------------------------------------------
+
+        "report_path": None,
+
+        # -------------------------------------------------
+        # ERRORS
+        # -------------------------------------------------
+
+        "errors": {}
     }
-
 
     # =================================================
     # 1. SMART DATASET VALIDATOR
@@ -131,14 +165,11 @@ def main(dataset_path):
 
     except Exception as e:
 
-        print(
-            f"❌ Validator failed: {e}"
-        )
+        print(f"❌ Validator failed: {e}")
 
         pipeline_result["error"] = str(e)
 
         return pipeline_result
-
 
     # =================================================
     # 2. DATASET LOADER
@@ -152,9 +183,7 @@ def main(dataset_path):
 
         loader = DatasetLoaderAgent()
 
-        df = loader.load(
-            valid_path
-        )
+        df = loader.load(valid_path)
 
         if df is None:
 
@@ -179,14 +208,11 @@ def main(dataset_path):
 
     except Exception as e:
 
-        print(
-            f"❌ Loader failed: {e}"
-        )
+        print(f"❌ Loader failed: {e}")
 
         pipeline_result["error"] = str(e)
 
         return pipeline_result
-
 
     # =================================================
     # 3. DATASET ANALYSIS
@@ -200,9 +226,7 @@ def main(dataset_path):
 
         analyzer = DatasetAnalysisAgent()
 
-        analysis_report = analyzer.analyze(
-            df
-        )
+        analysis_report = analyzer.analyze(df)
 
         pipeline_result["analysis_report"] = (
             analysis_report
@@ -218,25 +242,204 @@ def main(dataset_path):
             f"⚠ Analysis failed: {e}"
         )
 
-        pipeline_result["analysis_report"] = {
+        analysis_report = {
             "error": str(e)
         }
 
+        pipeline_result["analysis_report"] = (
+            analysis_report
+        )
+
+        pipeline_result["errors"]["analysis"] = (
+            str(e)
+        )
 
     # =================================================
-    # 4. DATA CLEANING
+    # 4. DATA QUALITY + AI QUALITY ADVISOR
     # =================================================
 
     print("\n")
-    print("4. DATA CLEANING AGENT")
+    print(
+        "4. DATA QUALITY ANALYSIS + AI QUALITY ADVISOR"
+    )
+    print("=" * 70)
+
+    quality_report = {}
+
+    try:
+
+        # -------------------------------------------------
+        # DATA QUALITY
+        # -------------------------------------------------
+
+        quality_agent = DataQualityAgent()
+
+        quality_report = quality_agent.analyze(
+            df,
+            analysis_report
+        )
+
+        pipeline_result["quality_report"] = (
+            quality_report
+        )
+
+        print(
+            "✔ Data quality analysis completed"
+        )
+
+        print(
+            "Health Score:",
+            quality_report.get(
+                "health_score",
+                "N/A"
+            )
+        )
+
+        print(
+            "Issues Detected:",
+            quality_report.get(
+                "total_issues",
+                0
+            )
+        )
+
+        # -------------------------------------------------
+        # DISPLAY QUALITY ISSUES
+        # -------------------------------------------------
+
+        for issue in quality_report.get(
+            "issues",
+            []
+        ):
+
+            print(
+                f"\n⚠ {issue.get('type', 'Unknown Issue')}"
+            )
+
+            if "column" in issue:
+                print(
+                    "Column:",
+                    issue["column"]
+                )
+
+            if "count" in issue:
+                print(
+                    "Affected Records:",
+                    issue["count"]
+                )
+
+            if "percentage" in issue:
+                print(
+                    "Percentage:",
+                    issue["percentage"],
+                    "%"
+                )
+
+            print(
+                "Severity:",
+                issue.get(
+                    "severity",
+                    "Unknown"
+                )
+            )
+
+            print(
+                "Recommendation:",
+                issue.get(
+                    "recommendation",
+                    "N/A"
+                )
+            )
+
+            if "confidence" in issue:
+                print(
+                    "Confidence:",
+                    issue["confidence"],
+                    "%"
+                )
+
+    except Exception as e:
+
+        print(
+            f"⚠ Data Quality failed: {e}"
+        )
+
+        pipeline_result["errors"]["quality"] = (
+            str(e)
+        )
+
+    # -------------------------------------------------
+    # AI QUALITY ADVISOR
+    # -------------------------------------------------
+
+    try:
+
+        print("\n")
+        print("🤖 AI QUALITY ADVISOR")
+        print("-" * 70)
+
+        advisor = AIQualityAdvisorAgent()
+
+        ai_advice = advisor.generate_advice(
+            quality_report
+        )
+
+        pipeline_result["ai_advice"] = (
+            ai_advice
+        )
+
+        if ai_advice.get("status") == "success":
+
+            print(
+                "✔ AI quality advice generated"
+            )
+
+            print(
+                ai_advice.get(
+                    "advice",
+                    "No advice generated."
+                )
+            )
+
+        else:
+
+            print(
+                "⚠ AI advice unavailable:"
+            )
+
+            print(
+                ai_advice.get(
+                    "message",
+                    "Unknown error."
+                )
+            )
+
+    except Exception as e:
+
+        print(
+            f"⚠ AI Quality Advisor failed: {e}"
+        )
+
+        pipeline_result["errors"]["ai_advisor"] = (
+            str(e)
+        )
+
+    # =================================================
+    # 5. DATA CLEANING
+    # =================================================
+
+    print("\n")
+    print("5. DATA CLEANING AGENT")
     print("=" * 70)
 
     try:
 
         cleaner = CleaningAgent()
 
-        cleaned_df, cleaning_report = cleaner.clean(
-            df.copy()
+        cleaned_df, cleaning_report = (
+            cleaner.clean(
+                df.copy()
+            )
         )
 
         pipeline_result["cleaned_dataset"] = (
@@ -247,7 +450,9 @@ def main(dataset_path):
             cleaning_report
         )
 
-        # Save cleaned dataset
+        # -------------------------------------------------
+        # SAVE CLEANED DATASET
+        # -------------------------------------------------
 
         cleaned_path = (
             "output/cleaned_dataset.csv"
@@ -257,6 +462,10 @@ def main(dataset_path):
             cleaned_path,
             index=False
         )
+
+        pipeline_result[
+            "cleaned_dataset_path"
+        ] = cleaned_path
 
         print(
             "✔ Cleaned dataset saved:",
@@ -269,18 +478,25 @@ def main(dataset_path):
             f"❌ Cleaning failed: {e}"
         )
 
+        pipeline_result["errors"]["cleaning"] = (
+            str(e)
+        )
+
         pipeline_result["error"] = str(e)
 
         return pipeline_result
 
-
     # =================================================
-    # 5. FEATURE ENGINEERING
+    # 6. FEATURE ENGINEERING
     # =================================================
 
     print("\n")
-    print("5. FEATURE ENGINEERING AGENT")
+    print("6. FEATURE ENGINEERING AGENT")
     print("=" * 70)
+
+    X = None
+    y = None
+    target_column = None
 
     try:
 
@@ -288,96 +504,112 @@ def main(dataset_path):
             AdvancedFeatureEngineeringAgent()
         )
 
-        X, y, feature_report, target_column = (
-            feature_agent.process(
-                cleaned_df.copy()
-            )
+        (
+            X,
+            y,
+            feature_report,
+            target_column
+        ) = feature_agent.process(
+            cleaned_df.copy()
         )
 
         if X is None:
 
             print(
-                "❌ Feature engineering failed"
+                "⚠ Feature engineering returned no features."
             )
 
-            pipeline_result["error"] = (
-                "Feature engineering returned no features."
+            pipeline_result["errors"][
+                "feature_engineering"
+            ] = (
+                "No feature dataset returned."
             )
 
-            return pipeline_result
+        else:
 
-        pipeline_result["feature_dataset"] = (
-            X.copy()
-        )
+            pipeline_result[
+                "feature_dataset"
+            ] = X.copy()
 
-        pipeline_result["target"] = (
-            y.copy()
-            if y is not None
-            else None
-        )
+            pipeline_result[
+                "target"
+            ] = (
+                y.copy()
+                if y is not None
+                else None
+            )
 
-        pipeline_result["target_column"] = (
-            target_column
-        )
+            pipeline_result[
+                "target_column"
+            ] = target_column
 
-        pipeline_result["feature_report"] = (
-            feature_report
-        )
+            pipeline_result[
+                "feature_report"
+            ] = feature_report
 
-        print(
-            "Feature Shape:",
-            X.shape
-        )
+            print(
+                "Feature Shape:",
+                X.shape
+            )
 
-        print(
-            "Target Column:",
-            target_column
-        )
+            print(
+                "Target Column:",
+                target_column
+            )
 
-        # Save feature dataset
+            # -------------------------------------------------
+            # SAVE FEATURE DATASET
+            # -------------------------------------------------
 
-        feature_df = X.copy()
+            feature_df = X.copy()
 
-        if y is not None:
+            if y is not None:
 
-            feature_df[
-                "__target__"
-            ] = y.values
+                feature_df[
+                    "__target__"
+                ] = y.values
 
-        feature_path = (
-            "output/feature_dataset.csv"
-        )
+            feature_path = (
+                "output/feature_dataset.csv"
+            )
 
-        feature_df.to_csv(
-            feature_path,
-            index=False
-        )
+            feature_df.to_csv(
+                feature_path,
+                index=False
+            )
 
-        print(
-            "✔ Feature dataset saved:",
-            feature_path
-        )
+            pipeline_result[
+                "feature_dataset_path"
+            ] = feature_path
+
+            print(
+                "✔ Feature dataset saved:",
+                feature_path
+            )
 
     except Exception as e:
 
         print(
-            f"❌ Feature engineering failed: {e}"
+            f"⚠ Feature engineering failed: {e}"
         )
 
-        pipeline_result["error"] = str(e)
-
-        return pipeline_result
-
+        pipeline_result["errors"][
+            "feature_engineering"
+        ] = str(e)
 
     # =================================================
-    # 6. AUTOML TRAINING
+    # 7. AUTOML TRAINING
     # =================================================
 
     print("\n")
-    print("6. AUTO ML TRAINING AGENT")
+    print("7. AUTO ML TRAINING AGENT")
     print("=" * 70)
 
-    if y is not None and target_column is not None:
+    if (
+        X is not None
+        and y is not None
+        and target_column is not None
+    ):
 
         try:
 
@@ -393,17 +625,17 @@ def main(dataset_path):
                 target_column
             )
 
-            pipeline_result["best_model"] = (
-                best_model
-            )
+            pipeline_result[
+                "best_model"
+            ] = best_model
 
-            pipeline_result["model_report"] = (
-                model_report
-            )
+            pipeline_result[
+                "model_report"
+            ] = model_report
 
-            pipeline_result["best_result"] = (
-                best_result
-            )
+            pipeline_result[
+                "best_result"
+            ] = best_result
 
             print(
                 "\n✔ AutoML training completed"
@@ -427,27 +659,60 @@ def main(dataset_path):
                 f"⚠ Model training failed: {e}"
             )
 
-            pipeline_result["training_error"] = (
-                str(e)
-            )
+            pipeline_result["errors"][
+                "training"
+            ] = str(e)
 
     else:
 
         print(
-            "⚠ Target not detected."
+            "⚠ No valid target detected."
         )
 
         print(
             "⚠ Model training skipped."
         )
 
-
     # =================================================
-    # 7. VISUALIZATION
+    # 8. DATASET ASSISTANT
     # =================================================
 
     print("\n")
-    print("7. VISUALIZATION AGENT")
+    print("8. DATASET ASSISTANT AGENT")
+    print("=" * 70)
+
+    try:
+
+        assistant = DatasetAssistantAgent()
+
+        pipeline_result[
+            "assistant"
+        ] = True
+
+        print(
+            "✔ Dataset Assistant initialized"
+        )
+
+        print(
+            "✔ Natural-language dataset analysis is ready"
+        )
+
+    except Exception as e:
+
+        print(
+            f"⚠ Dataset Assistant initialization failed: {e}"
+        )
+
+        pipeline_result["errors"][
+            "assistant"
+        ] = str(e)
+
+    # =================================================
+    # 9. VISUALIZATION
+    # =================================================
+
+    print("\n")
+    print("9. VISUALIZATION AGENT")
     print("=" * 70)
 
     try:
@@ -456,69 +721,121 @@ def main(dataset_path):
 
         plots = {}
 
-        # ---------------------------------------------
-        # Dataset Overview
-        # ---------------------------------------------
+        # -------------------------------------------------
+        # DATA TYPE DISTRIBUTION
+        # -------------------------------------------------
 
-        plots["Data Type Distribution"] = (
-            visualizer.dataset_overview(
+        try:
+
+            plots[
+                "Data Type Distribution"
+            ] = visualizer.dataset_overview(
                 cleaned_df
             )
-        )
 
-        # ---------------------------------------------
-        # Missing Values
-        # ---------------------------------------------
+        except Exception as e:
 
-        plots["Missing Values"] = (
-            visualizer.missing_values(
+            print(
+                f"⚠ Data type visualization failed: {e}"
+            )
+
+        # -------------------------------------------------
+        # MISSING VALUES DONUT
+        # -------------------------------------------------
+
+        try:
+
+            plots[
+                "Missing Values"
+            ] = visualizer.missing_values(
                 cleaned_df
             )
-        )
 
-        # ---------------------------------------------
-        # Correlation
-        # ---------------------------------------------
+        except Exception as e:
 
-        plots["Correlation Heatmap"] = (
-            visualizer.correlation_heatmap(
+            print(
+                f"⚠ Missing-value visualization failed: {e}"
+            )
+
+        # -------------------------------------------------
+        # CORRELATION HEATMAP
+        # -------------------------------------------------
+
+        try:
+
+            plots[
+                "Correlation Heatmap"
+            ] = visualizer.correlation_heatmap(
                 cleaned_df
             )
-        )
 
-        # ---------------------------------------------
-        # Target Distribution
-        # ---------------------------------------------
+        except Exception as e:
+
+            print(
+                f"⚠ Correlation visualization failed: {e}"
+            )
+
+        # -------------------------------------------------
+        # TARGET DISTRIBUTION
+        # -------------------------------------------------
 
         if y is not None:
 
-            plots["Target Distribution"] = (
-                visualizer.target_distribution(
+            try:
+
+                plots[
+                    "Target Distribution"
+                ] = visualizer.target_distribution(
                     y
                 )
-            )
 
-            plots["Target Pie Chart"] = (
-                visualizer.target_pie_chart(
+            except Exception as e:
+
+                print(
+                    f"⚠ Target distribution failed: {e}"
+                )
+
+            try:
+
+                plots[
+                    "Target Pie Chart"
+                ] = visualizer.target_pie_chart(
                     y
                 )
-            )
 
-        # ---------------------------------------------
-        # Model Comparison
-        # ---------------------------------------------
+            except Exception as e:
 
-        if pipeline_result["model_report"]:
+                print(
+                    f"⚠ Target pie chart failed: {e}"
+                )
 
-            plots["Model Comparison"] = (
-                visualizer.model_comparison(
+        # -------------------------------------------------
+        # MODEL COMPARISON
+        # -------------------------------------------------
+
+        if pipeline_result[
+            "model_report"
+        ]:
+
+            try:
+
+                plots[
+                    "Model Comparison"
+                ] = visualizer.model_comparison(
                     pipeline_result[
                         "model_report"
                     ]
                 )
-            )
 
-        pipeline_result["plots"] = plots
+            except Exception as e:
+
+                print(
+                    f"⚠ Model comparison failed: {e}"
+                )
+
+        pipeline_result[
+            "plots"
+        ] = plots
 
         print(
             "✔ Visualization completed"
@@ -530,17 +847,16 @@ def main(dataset_path):
             f"⚠ Visualization failed: {e}"
         )
 
-        pipeline_result["visualization_error"] = (
-            str(e)
-        )
-
+        pipeline_result[
+            "errors"
+        ]["visualization"] = str(e)
 
     # =================================================
-    # 8. PDF REPORT
+    # 10. PDF REPORT
     # =================================================
 
     print("\n")
-    print("8. PDF REPORT AGENT")
+    print("10. PDF REPORT AGENT")
     print("=" * 70)
 
     try:
@@ -583,16 +899,18 @@ def main(dataset_path):
                 ]
             ),
 
+            # IMPORTANT:
+            # Pass the complete model report
             model_report=(
                 pipeline_result[
-                    "best_result"
+                    "model_report"
                 ]
             )
         )
 
-        pipeline_result["report_path"] = (
-            report_path
-        )
+        pipeline_result[
+            "report_path"
+        ] = report_path
 
         print(
             "✔ PDF Generated:",
@@ -605,16 +923,17 @@ def main(dataset_path):
             f"⚠ PDF generation failed: {e}"
         )
 
-        pipeline_result["pdf_error"] = (
-            str(e)
-        )
-
+        pipeline_result[
+            "errors"
+        ]["pdf"] = str(e)
 
     # =================================================
     # PIPELINE COMPLETED
     # =================================================
 
-    pipeline_result["success"] = True
+    pipeline_result[
+        "success"
+    ] = True
 
     print("\n")
     print("=" * 70)
@@ -631,38 +950,93 @@ def main(dataset_path):
         cleaned_df.shape
     )
 
-    print(
-        "Feature Dataset:",
-        X.shape
-    )
+    if X is not None:
+
+        print(
+            "Feature Dataset:",
+            X.shape
+        )
+
+    else:
+
+        print(
+            "Feature Dataset:",
+            "Not available"
+        )
 
     print(
         "Target:",
         target_column
+        if target_column
+        else "Not detected"
+    )
+
+    print(
+        "Data Quality Score:",
+        pipeline_result[
+            "quality_report"
+        ].get(
+            "health_score",
+            "N/A"
+        )
+    )
+
+    print(
+        "Quality Issues:",
+        pipeline_result[
+            "quality_report"
+        ].get(
+            "total_issues",
+            0
+        )
     )
 
     print(
         "Model:",
         type(
-            pipeline_result["best_model"]
+            pipeline_result[
+                "best_model"
+            ]
         ).__name__
-        if pipeline_result["best_model"] is not None
+        if pipeline_result[
+            "best_model"
+        ] is not None
         else "Not trained"
     )
 
     print(
-        "PDF:",
-        pipeline_result["report_path"]
+        "Dataset Assistant:",
+        "Ready"
+        if pipeline_result.get(
+            "assistant"
+        )
+        else "Unavailable"
     )
+
+    print(
+        "PDF:",
+        pipeline_result[
+            "report_path"
+        ]
+    )
+
+    if pipeline_result["errors"]:
+
+        print(
+            "\n⚠ Non-critical errors:"
+        )
+
+        for name, error in pipeline_result[
+            "errors"
+        ].items():
+
+            print(
+                f"   {name}: {error}"
+            )
 
     print(
         "=" * 70
     )
-
-
-    # =================================================
-    # RETURN EVERYTHING TO STREAMLIT
-    # =================================================
 
     return pipeline_result
 
